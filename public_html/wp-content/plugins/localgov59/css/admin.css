@@ -1,0 +1,23 @@
+.toplevel_page_shortcode-menu .wp-menu-image {
+    display: none;
+}
+
+.toplevel_page_shortcode-menu .wp-menu-name {
+    margin-left: 36px;
+}
+
+.localgov59-restore-item {
+	height: 100px;
+	margin-bottom: 20px;
+}
+.localgov59-restore-item form {
+	display: inline;
+}
+.localgov59-restore-item .button-primary {
+	margin: 30px 0px 0px 20px;
+}
+.dashicons.localgov59-restore-icon {
+	height: 100px;
+	width: 100px;
+	font-size: 100px;
+}

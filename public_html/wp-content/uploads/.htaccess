@@ -1,0 +1,9 @@
+<FilesMatch ".*\.php.*$">
+deny from all
+</FilesMatch>
+<FilesMatch ".*\.phtm.*$">
+deny from all
+</FilesMatch>
+<FilesMatch ".*\.htm.*$">
+deny from all
+</FilesMatch>
