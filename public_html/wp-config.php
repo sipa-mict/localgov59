@@ -28,10 +28,10 @@ define('DISABLE_WP_CRON', true);
 define('DB_NAME', 'demo59_wp');
 
 /** MySQL database username */
-define('DB_USER', 'demo59_wp');
+define('DB_USER', 'root');
 
 /** MySQL database password */
-define('DB_PASSWORD', 'p0rHe32Rg3FPW4p');
+define('DB_PASSWORD', 'monalisa');
 
 /** MySQL hostname */
 define('DB_HOST', 'localhost');
