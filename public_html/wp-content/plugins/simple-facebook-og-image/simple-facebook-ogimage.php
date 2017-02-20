@@ -4,12 +4,16 @@
  * Plugin Name: Simple Facebook OG image
  * Plugin URI: https://github.com/denchev/simple-wordpress-ogimage
  * Description: A very simple plugin to enable og:image tag only when you share to Facebook
- * Version: 1.2
- * Author: Marush Denchev
- * Author URI: http://www.htmlpet.com/
- * License: GPLv2
+ * Version: 1.3.3
+ * License: GPL-3.0
+ * License URI: http://www.gnu.org/licenses/gpl-3.0.txt
+ * Text Domain: sfogi
+ * Domain Path: /languages
+ * Author: HTML Pet Ltd
+ * Author URI: https://www.htmlpet.com
  */
 
+include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 
 define('SFOGI_PLUGIN_TITLE', __('Simple Facebook OG image', 'sfogi'));
 
@@ -40,7 +44,7 @@ if( ! function_exists( 'sfogi_get' ) ) {
 		}
 
 		// No OG image? Get it from featured image
-		if(empty($og_image)) {
+		if( empty( $og_image ) ) {
 
 			$image 		= wp_get_attachment_image_src( get_post_thumbnail_id( $post_id ), 'single-post-thumbnail' );
 
@@ -53,9 +57,9 @@ if( ! function_exists( 'sfogi_get' ) ) {
 		} 
 
 		// No OG image still? Get it from post content
-		if(empty( $og_image ) ) {
+		if( empty( $og_image ) ) {
 
-			$post = get_post($post_id);
+			$post = get_post( $post_id );
 
 			// Get all images from within post content
 			preg_match_all('/<img(.*?)src="(?P<src>.*?)"([^>]+)>/', $post->post_content, $matches);
@@ -69,7 +73,7 @@ if( ! function_exists( 'sfogi_get' ) ) {
 		}
 
 		// No OG ... still? Well let see if there is something in the default section
-		if(empty( $og_image ) ) {
+		if( empty( $og_image ) ) {
 
 			$option = get_option('sfogi_default_image');
 
@@ -78,8 +82,85 @@ if( ! function_exists( 'sfogi_get' ) ) {
 			}
 		}
 
+		// Support for getty-images embed
+		if( empty( $og_image ) ) {
+
+			if(!$post) {
+				$post = get_post( $post_id );
+			}
+
+			$getty_domain = "embed.gettyimages.com/embed/";
+			
+			// Get all getty images frames from content
+			preg_match_all('#<(.*?)src="//'.$getty_domain.'(?P<src>.*?)"([^>]+)>#', $post->post_content, $matches);
+			
+			if(isset($matches['src'][0])) {
+				foreach($matches['src'] as $match) {
+					
+					// Get content of the iframe
+					$frame_content = wp_remote_get("https://".$getty_domain.$match);
+
+					if( is_array($frame_content) && isset($frame_content['body']) ) {
+						$frame_content = $frame_content['body'];
+
+						// Find og:image address inside the iframe
+						preg_match('#<meta property="og:image" content="(?P<url>.*)" />#i', $frame_content, $frame_matches);
+						
+						if(isset($frame_matches['url']))
+							$og_image[] = $frame_matches['url'];
+					}
+				}
+			}
+		}
+		
+		// Support for Embedly
+		if( empty($og_image) && is_plugin_active('embedly/embedly.php') ) {
+
+			global $WP_Embedly;
+
+			if($WP_Embedly->valid_key()) {
+
+				if(!isset($post)) {
+					$post = get_post($post_id);
+				}
+
+				// Force filters to apply the Embedly logic
+				$post_content = apply_filters('the_content', $post->post_content);
+
+				// Seach for some key Embedly components
+				preg_match('{<blockquote class="embedly-card"(.*?)data-card-key="(?P<key>.*?)"(.*?)>(.*?)<a href="(?P<href>.*?)">(.*?)</a>(.*?)</blockquote>}is', $post_content, $embedly_matches);
+
+				if(!empty($embedly_matches['key']) && !empty($embedly_matches['href'])) {
+
+					$scheme = strpos($embedly_matches['href'], 'https') === false ? 'http' : 'https';
+
+					$embedly_remote_url = EMBEDLY_BASE_URI . 'card=1&key=' . $embedly_matches['key'] . '&native=true&scheme=' . $scheme . '&urls=' . rawurlencode($embedly_matches['href']) . '&v=2&youtube_showinfo=0';
+
+					$args = array('timeout' => 5);
+
+					$embedly_remote_response = wp_remote_get($embedly_remote_url, $args);
+
+					if(!is_wp_error($embedly_remote_response)) {
+
+						$embedly_json = json_decode($embedly_remote_response['body']);
+
+						/**
+						 * Use when queriy card-details, not only card
+						 */
+						#if(isset($embedly_json[0]) && !empty($embedly_json[0]->images && isset($embedly_json[0]->images[0]->url))) {
+						#	$og_image[] = $embedly_json[0]->images[0]->url;
+						#}
+
+						if(is_array($embedly_json) && isset($embedly_json[0]->thumbnail_url)) {
+							$og_image[] = $embedly_json[0]->thumbnail_url;
+						}
+					} 
+				}
+			}
+		}
+
 		// Found an image? Good. Display it.
-		if(!empty( $og_image )) {
+		if( ! empty( $og_image ) ) {
 
 			// Cache the image source but only if the source is not retrieved from cache. No point of overwriting the same source.
 			if($cached_image === false) {
@@ -96,8 +177,9 @@ if( ! function_exists( 'sfogi_get' ) ) {
 if( ! function_exists( 'sfogi_wp_head' ) ) {
 
 	function sfogi_wp_head() {
+
 		// Attach only to single posts
-		if(is_single() ) {
+		if( is_single() || is_page() ) {
 
 			$og_image 	= sfogi_get();
 
@@ -112,18 +194,65 @@ if( ! function_exists( 'sfogi_wp_head' ) ) {
 					$og_image = array_slice($og_image, 0, 1);
 				}
 
+				// Apply filters
+				$og_image = apply_filters('sfogi_before_output', $og_image);
+
 				// List multiple images to Facebook
 				foreach($og_image as $_image) {
+
+					$_image = sfogi_prepare_image_url( $_image );
+					$_image_secure = sfogi_get_secure_url( $_image );
+
 					echo '<meta property="og:image" content="' . $_image . '">' . "\n";
+					echo '<meta property="og:image:url" content="' . $_image . '">' . "\n";
+					echo '<meta property="og:image:secure_url" content="' . $_image_secure . '">' . "\n";
 				}
 
 				// For other medias just display the one image
 				echo '<meta property="twitter:image" content="' . $image . '">' . "\n";
+				// SwiftType - https://swiftype.com/
+				echo '<meta property="st:image" content="' . $image . '">' . "\n";
 				echo '<link rel="image_src" href="' . $image . '">' . "\n";
 			}
 		}
 	}
 
+}
+
+if( ! function_exists( 'sfogi_prepare_image_url' ) ) {
+
+	function sfogi_prepare_image_url( $url ) {
+
+		$site_url = get_site_url();
+
+		// Image path is relative and not an absolute one - apply site url
+		if( strpos( $url, $site_url ) === false ) {
+
+			// The $url comes from an external URL
+			if( preg_match('{https*://}', $url) ) {
+
+				return $url;
+			}
+
+			// Make sure there is no double /
+			if( substr( $site_url, -1) === '/' && $url[0] === '/') {
+
+				$site_url = rtrim( $site_url, '/' );
+			}
+
+			$url = $site_url . $url;
+		}
+		
+		return $url;
+	}
+}
+
+if( ! function_exists( 'sfogi_get_secure_url' ) ) {
+
+	function sfogi_get_secure_url( $url ) {
+
+		return str_replace('http://', 'https://', $url);
+	}
 }
 
 if( ! function_exists( 'sfogi_admin_menu' ) ) {

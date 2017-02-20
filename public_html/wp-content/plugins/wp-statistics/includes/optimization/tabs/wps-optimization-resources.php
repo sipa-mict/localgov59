@@ -155,6 +155,17 @@
 
 			<tr valign="top">
 				<th scope="row">
+					<?php _e('PHP IPv6 Enabled', 'wp_statistics'); ?>:
+				</th>
+				
+				<td>
+					<strong><?php if( defined( 'AF_INET6' ) ) { echo 'Yes'; } else { echo 'No'; } ?></strong>
+					<p class="description"><?php _e('Is PHP compiled with IPv6 support.  You may see warning messages in your PHP log if it is not and you receive HTTP headers with IPv6 addresses in them.', 'wp_statistics'); ?></p>
+				</td>
+			</tr>
+			
+			<tr valign="top">
+				<th scope="row">
 					<?php _e('jQuery Version', 'wp_statistics'); ?>:
 				</th>
 				
@@ -177,12 +188,12 @@
 
 			<tr valign="top">
 				<th scope="row">
-					<?php _e('BC Math', 'wp_statistics'); ?>:
+					<?php _e('Zlib gzopen()', 'wp_statistics'); ?>:
 				</th>
 				
 				<td>
-					<strong><?php if( function_exists('bcadd') ) { _e('Installed','wp_statistics'); } else { _e('Not installed', 'wp_statistics'); }?></strong>
-					<p class="description"><?php _e('If the PHP BC Math Extension is installed.  BC Math is no longer required for the GeoIP code and is listed here only for historical reasons.', 'wp_statistics'); ?></p>
+					<strong><?php if( function_exists('gzopen') ) { _e('Installed','wp_statistics'); } else { _e('Not installed', 'wp_statistics'); }?></strong>
+					<p class="description"><?php _e('If the gzopen() function is installed.  gzopen() is required for the GeoIP database to be downloaded successfully.', 'wp_statistics'); ?></p>
 				</td>
 			</tr>
 

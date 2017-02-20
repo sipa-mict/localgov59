@@ -3,14 +3,14 @@
   Plugin Name: List category posts
   Plugin URI: https://github.com/picandocodigo/List-Category-Posts
   Description: List Category Posts allows you to list posts by category in a post/page using the [catlist] shortcode. This shortcode accepts a category name or id, the order in which you want the posts to display, the number of posts to display and many more parameters. You can use [catlist] as many times as needed with different arguments. Usage: [catlist argument1=value1 argument2=value2].
-  Version: 0.67.1
+  Version: 0.71.1
   Author: Fernando Briano
   Author URI: http://fernandobriano.com
 
   Text Domain:   list-category-posts
   Domain Path:   /languages/
 
-  Copyright 2008-2015  Fernando Briano  (email : fernando@picandocodigo.net)
+  Copyright 2008-2016  Fernando Briano  (email : fernando@picandocodigo.net)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -132,6 +132,15 @@ class ListCategoryPosts{
                              'no_post_titles' => 'no',
                              'link_titles' => true,
                              'link_dates' => 'no',
+                             'after' => '',
+                             'after_year' => '',
+                             'after_month' => '',
+                             'after_day' => '',
+                             'before' => '',
+                             'before_year' => '',
+                             'before_month' => '',
+                             'before_day' => '',
+                             'tags_as_class' => 'no',
                            ), $atts);
     if($atts['numberposts'] == ''){
       $atts['numberposts'] = get_option('numberposts');
@@ -164,6 +173,12 @@ function lpc_meta($links, $file) {
 }
 
 add_filter( 'plugin_row_meta', 'lpc_meta', 10, 2 );
+
+//adds a default value to numberposts on plugin activation
+function set_default_numberposts() {
+    add_option('numberposts', 10);
+}
+register_activation_hook( __FILE__, 'set_default_numberposts' );
 
 function load_i18n(){
   load_plugin_textdomain( 'list-category-posts', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );

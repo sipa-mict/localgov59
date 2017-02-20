@@ -234,12 +234,24 @@ class CatListDisplayer {
    * @return string
    */
   private function lcp_build_post($single, $tag){
-
     $class ='';
+    $tag_css = '';
     if ( is_object($this->parent) && is_object($single) && $this->parent->ID == $single->ID ){
-      $class = ' class="current" ';
+      $class = 'current';
     }
-    $lcp_display_output = '<'. $tag . $class . '>';
+
+    if ( array_key_exists('tags_as_class', $this->params) && $this->params['tags_as_class'] == 'yes' ) {
+      $post_tags = wp_get_post_Tags($single->ID);
+      if ( !empty($post_tags) ){
+        foreach ($post_tags as $post_tag) {
+          $class .= " $post_tag->slug ";
+        }
+      }
+    }
+    if ( !empty($class) ){
+      $tag_css = 'class="' . $class . '"';
+    }
+    $lcp_display_output = '<'. $tag . ' ' . $tag_css . '>';
 
     if ( empty($this->params['no_post_titles']) || !empty($this->params['no_post_titles']) && $this->params['no_post_titles'] !== 'yes' ) {
       $lcp_display_output .= $this->get_post_title($single);
@@ -395,10 +407,18 @@ class CatListDisplayer {
   private function get_custom_fields($single){
     if(!empty($this->params['customfield_display'])){
       $info = $this->catlist->get_custom_fields($this->params['customfield_display'], $single->ID);
-      if(empty($this->params['customfield_tag']) || $this->params['customfield_tag'] == null)
+      if(empty($this->params['customfield_tag']) || $this->params['customfield_tag'] == null){
         $tag = 'div';
-      if(empty($this->params['customfield_class']) || $this->params['customfield_class'] == null)
+      } else {
+        $tag = $this->params['customfield_tag'];
+      }
+
+      if(empty($this->params['customfield_class']) || $this->params['customfield_class'] == null){
         $css_class = 'lcp_customfield';
+      } else {
+        $css_class = $this->params['customfield_class'];
+      }
+
       $final_info = '';
       if(!is_array($info)){
         $final_info = $this->assign_style($info, $tag, $css_class);
